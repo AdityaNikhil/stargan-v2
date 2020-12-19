@@ -1,3 +1,4 @@
+
 """
 StarGAN v2
 Copyright (c) 2020-present NAVER Corp.
@@ -23,6 +24,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 import torchvision.utils as vutils
+import wandb
 
 
 def save_json(json_file, filename):
@@ -54,9 +56,19 @@ def denormalize(x):
     return out.clamp_(0, 1)
 
 
-def save_image(x, ncol, filename):
+def save_image(x, ncol, filename, img_type):
     x = denormalize(x)
     vutils.save_image(x.cpu(), filename, nrow=ncol, padding=0)
+    if ncol != 1:  # ignore solo images from the evaluation phase
+        # extract caption
+        caption = filename.split("/")[-1].split(".")[0]
+        if img_type == "reference":
+            # these are the fixed grids, good for comparison across training time
+            wandb.log({"val_reference" : wandb.Image(filename, caption=caption)}, commit=False)
+        elif img_type == "cycle":
+            wandb.log({"cycle_consistency" : wandb.Image(filename, caption=caption)}, commit=False)
+        elif img_type == "latent":
+            wandb.log({"latent" : wandb.Image(filename, caption=caption)}, commit=False)
 
 
 @torch.no_grad()
@@ -70,7 +82,7 @@ def translate_and_reconstruct(nets, args, x_src, y_src, x_ref, y_ref, filename):
     x_rec = nets.generator(x_fake, s_src, masks=masks)
     x_concat = [x_src, x_ref, x_fake, x_rec]
     x_concat = torch.cat(x_concat, dim=0)
-    save_image(x_concat, N, filename)
+    save_image(x_concat, N, filename, img_type="cycle")
     del x_concat
 
 
@@ -95,7 +107,7 @@ def translate_using_latent(nets, args, x_src, y_trg_list, z_trg_list, psi, filen
             x_concat += [x_fake]
 
     x_concat = torch.cat(x_concat, dim=0)
-    save_image(x_concat, N, filename)
+    save_image(x_concat, N, filename, img_type="latent")
 
 
 @torch.no_grad()
@@ -114,8 +126,10 @@ def translate_using_reference(nets, args, x_src, x_ref, y_ref, filename):
         x_concat += [x_fake_with_ref]
 
     x_concat = torch.cat(x_concat, dim=0)
-    save_image(x_concat, N+1, filename)
+    save_image(x_concat, N+1, filename, img_type="reference")
     del x_concat
+
+
 
 
 @torch.no_grad()

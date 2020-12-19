@@ -18,7 +18,7 @@ import torch
 from core.data_loader import get_train_loader
 from core.data_loader import get_test_loader
 from core.solver import Solver
-
+import wandb
 
 def str2bool(v):
     return v.lower() in ('true')
@@ -58,6 +58,7 @@ def main(args):
                                             num_workers=args.num_workers))
         solver.train(loaders)
     elif args.mode == 'sample':
+        wandb.init(project="StarGAN_V2",name='Celeb_Demo')
         assert len(subdirs(args.src_dir)) == args.num_domains
         assert len(subdirs(args.ref_dir)) == args.num_domains
         loaders = Munch(src=get_test_loader(root=args.src_dir,

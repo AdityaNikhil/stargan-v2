@@ -1,3 +1,4 @@
+
 """
 StarGAN v2
 Copyright (c) 2020-present NAVER Corp.
@@ -13,6 +14,7 @@ from os.path import join as ospj
 import time
 import datetime
 from munch import Munch
+import wandb
 
 import torch
 import torch.nn as nn
@@ -155,6 +157,7 @@ class Solver(nn.Module):
                 all_losses['G/lambda_ds'] = args.lambda_ds
                 log += ' '.join(['%s: [%.4f]' % (key, value) for key, value in all_losses.items()])
                 print(log)
+                wandb.log({"Losses":all_losses})
 
             # generate images for debugging
             if (i+1) % args.sample_every == 0:
@@ -184,9 +187,6 @@ class Solver(nn.Module):
         print('Working on {}...'.format(fname))
         utils.translate_using_reference(nets_ema, args, src.x, ref.x, ref.y, fname)
 
-        fname = ospj(args.result_dir, 'video_ref.mp4')
-        print('Working on {}...'.format(fname))
-        utils.video_ref(nets_ema, args, src.x, ref.x, ref.y, fname)
 
     @torch.no_grad()
     def evaluate(self):
